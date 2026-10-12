@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 import pytest
 import yaml
 
-from roborock_local_server.ha_addon import write_config_from_home_assistant_options
 from roborock_local_server.config import load_config
+from roborock_local_server.ha_addon import write_config_from_home_assistant_options
 
 
 def _write_options(path: Path, payload: dict[str, object]) -> None:

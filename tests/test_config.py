@@ -1,8 +1,9 @@
 from pathlib import Path
+
 import pytest
+from conftest import write_release_config
 
 from roborock_local_server.config import load_config, resolve_paths
-from conftest import write_release_config
 
 
 def test_logging_defaults_and_overrides(tmp_path):

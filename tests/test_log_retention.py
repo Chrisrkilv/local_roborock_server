@@ -1,16 +1,39 @@
-from concurrent.futures import ThreadPoolExecutor
+from __future__ import annotations
+
 import json
 import logging
-from pathlib import Path
 import tracemalloc
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from conftest import write_release_config
 
-from roborock_local_server.bundled_backend.shared.io_utils import append_jsonl, setup_file_logger
-from roborock_local_server.bundled_backend.shared.zone_ranges_store import ZoneRangesStore
-from roborock_local_server.log_retention import (
-    BoundedRotatingFileHandler, configure_jsonl_logging, iter_log_lines, log_paths,
+from roborock_local_server import backend as _backend  # noqa: F401
+from roborock_local_server import log_retention
+from roborock_local_server.backend import append_jsonl as backend_append
+from roborock_local_server.bundled_backend.https_server.routes.user.scene.service import (
+    _scene_zone_ranges_from_mqtt,
 )
+from roborock_local_server.bundled_backend.shared.io_utils import (
+    append_jsonl,
+    setup_file_logger,
+)
+from roborock_local_server.bundled_backend.shared.runtime_credentials import (
+    RuntimeCredentialsStore,
+)
+from roborock_local_server.bundled_backend.shared.zone_ranges_store import (
+    ZoneRangesStore,
+)
+from roborock_local_server.config import load_config, resolve_paths
+from roborock_local_server.log_retention import (
+    BoundedRotatingFileHandler,
+    configure_jsonl_logging,
+    iter_log_lines,
+    log_paths,
+)
+from roborock_local_server.server import ReleaseSupervisor
 
 
 def _record(message: str) -> logging.LogRecord:
@@ -69,8 +92,6 @@ def test_jsonl_rotation_preserves_format_and_limits_backups(tmp_path, backup_cou
 
 
 def test_concurrent_jsonl_writes_share_lock_across_backend_import_paths(tmp_path):
-    from roborock_local_server.backend import append_jsonl as backend_append
-
     path = tmp_path / "decompiled_mqtt.jsonl"
     configure_jsonl_logging(path, max_bytes=128, backup_count=20)
 
@@ -127,8 +148,6 @@ def test_migration_does_not_load_entire_legacy_file(tmp_path):
 
 
 def test_failed_atomic_trim_leaves_original_log_intact(tmp_path, monkeypatch):
-    from roborock_local_server import log_retention
-
     path = tmp_path / "test.log"
     original = b"old entry\n" * 30
     path.write_bytes(original)
@@ -176,10 +195,6 @@ def test_zone_recovery_uses_all_backups_oldest_to_newest_without_active_file(tmp
 
 
 def test_scene_fallback_reads_backups_and_latest_coordinates_win(tmp_path):
-    from types import SimpleNamespace
-    from roborock_local_server import backend  # Initialize vendored imports.
-    from https_server.routes.user.scene.service import _scene_zone_ranges_from_mqtt
-
     path = tmp_path / "decompiled_mqtt.jsonl"
     path.with_name(path.name + ".1").write_text(json.dumps(zone_entry([1, 2, 3, 4])) + "\n")
     ctx = SimpleNamespace(mqtt_jsonl=path)
@@ -190,11 +205,6 @@ def test_scene_fallback_reads_backups_and_latest_coordinates_win(tmp_path):
 
 @pytest.mark.parametrize("source_suffix", ["", ".4"])
 def test_supervisor_recovers_state_before_trimming_or_removing_logs(tmp_path, source_suffix):
-    from conftest import write_release_config
-    from roborock_local_server.config import load_config, resolve_paths
-    from roborock_local_server.server import ReleaseSupervisor
-    from roborock_local_server.bundled_backend.shared.runtime_credentials import RuntimeCredentialsStore
-
     config_file = write_release_config(tmp_path)
     config_file.write_text(config_file.read_text() + '\n[logging]\nmax_size_mb=1\nbackup_count=0\n')
     config = load_config(config_file)
@@ -224,7 +234,6 @@ def test_supervisor_recovers_state_before_trimming_or_removing_logs(tmp_path, so
             assert "CONNECT" not in mqtt_log.read_text()
             assert "set_scenes_zones" not in mqtt_jsonl.read_text()
         # The supervisor must configure both aliases used by the vendored backend.
-        from roborock_local_server.backend import append_jsonl as backend_append
         for index in range(3):
             backend_append(paths.http_jsonl_path, {"index": index, "payload": "x" * 600_000})
         assert len(_retained_json(paths.http_jsonl_path)) == 1

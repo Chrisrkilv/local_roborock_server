@@ -7,14 +7,24 @@ and both import paths must use the same per-file JSONL handlers and locks.
 from __future__ import annotations
 
 import logging
-from logging.handlers import RotatingFileHandler
 import os
-from pathlib import Path
+import re
 import tempfile
 import threading
-from typing import Iterator
+from collections.abc import Iterator
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from .config import LoggingConfig
+
+
+def _numbered_backups(path: Path) -> list[tuple[int, Path]]:
+    backups: list[tuple[int, Path]] = []
+    for candidate in path.parent.glob(f"{path.name}.*"):
+        suffix = candidate.name[len(path.name) + 1:]
+        if re.fullmatch(r"[1-9]\d*", suffix):
+            backups.append((int(suffix), candidate))
+    return sorted(backups, reverse=True)
 
 
 def log_paths(path: Path) -> list[Path]:
@@ -23,12 +33,7 @@ def log_paths(path: Path) -> list[Path]:
     Discover existing backups independently of the current retention setting so
     startup recovery can run before a reduced retention setting removes them.
     """
-    backups = []
-    for candidate in path.parent.glob(f"{path.name}.*"):
-        suffix = candidate.name[len(path.name) + 1:]
-        if suffix.isascii() and suffix.isdecimal() and int(suffix) > 0 and suffix == str(int(suffix)):
-            backups.append((int(suffix), candidate))
-    return [candidate for _, candidate in sorted(backups, reverse=True)] + [path]
+    return [candidate for _, candidate in _numbered_backups(path)] + [path]
 
 
 def iter_log_lines(path: Path) -> Iterator[str]:
@@ -47,8 +52,8 @@ def _trim_to_tail(path: Path, max_bytes: int) -> None:
         return
     with path.open("rb") as handle:
         handle.seek(-max_bytes - 1, os.SEEK_END)
-        preceding = handle.read(1)
-        tail = handle.read(max_bytes)
+        chunk = handle.read(max_bytes + 1)
+    preceding, tail = chunk[:1], chunk[1:]
     if preceding != b"\n":
         # The window starts mid-record (possibly mid UTF-8 character).
         _, _, tail = tail.partition(b"\n")
@@ -80,11 +85,12 @@ class BoundedRotatingFileHandler(RotatingFileHandler):
         super().__init__(path, maxBytes=max_bytes, backupCount=backup_count,
                          encoding="utf-8", errors="backslashreplace", delay=True)
         self.keep_open = keep_open
-        for candidate in log_paths(path):
-            if candidate != path and int(candidate.name[len(path.name) + 1:]) > backup_count:
+        for suffix_index, candidate in _numbered_backups(path):
+            if suffix_index > backup_count:
                 candidate.unlink(missing_ok=True)
             else:
                 _trim_to_tail(candidate, max_bytes)
+        _trim_to_tail(path, max_bytes)
 
     def _open(self):
         # Stable byte counts on Windows as well as Linux.
@@ -132,9 +138,11 @@ def configure_jsonl_logging(path: Path, *, max_bytes: int, backup_count: int) ->
         previous = _jsonl_handlers.pop(path, None)
         if previous is not None:
             previous.close()
-        _jsonl_handlers[path] = BoundedRotatingFileHandler(
+        handler = BoundedRotatingFileHandler(
             path, max_bytes=max_bytes, backup_count=backup_count, keep_open=False,
         )
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        _jsonl_handlers[path] = handler
 
 
 def append_jsonl_text(path: Path, encoded: str) -> None:
@@ -146,5 +154,6 @@ def append_jsonl_text(path: Path, encoded: str) -> None:
             handler = BoundedRotatingFileHandler(
                 path, max_bytes=defaults.max_bytes, backup_count=defaults.backup_count, keep_open=False,
             )
+            handler.setFormatter(logging.Formatter("%(message)s"))
             _jsonl_handlers[path] = handler
     handler.handle(logging.LogRecord("", logging.INFO, "", 0, encoded, (), None))
