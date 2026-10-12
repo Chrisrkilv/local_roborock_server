@@ -175,3 +175,31 @@ def test_topic_bridge_maps_same_model_devices_from_learned_runtime_credentials(t
     for duid, did in pairs.items():
         cloud_topic = CloudTopicKey(rriot_u="ha-user", mqtt_username="ha-mqtt", duid=duid)
         assert bridge._resolve_device_for_cloud(cloud_topic) == device_topics[did]
+
+
+def test_topic_bridge_model_fallback_does_not_reuse_did_learned_for_another_duid(tmp_path) -> None:
+    # The only a168 with a known model is already paired with another DUID, for
+    # example a replaced vacuum. The inventory's lone a168 must stay unmapped
+    # rather than be routed to that vacuum.
+    inventory_path = tmp_path / "web_api_inventory.json"
+    inventory_path.write_text(
+        json.dumps({"devices": [{"duid": "1mRc3mFQhMWxkAQIAGI46w", "model": "roborock.vacuum.a168"}]}),
+        encoding="utf-8",
+    )
+    runtime_state = SimpleNamespace(
+        key_models_by_did=lambda: {"1103841353419": "roborock.vacuum.a168"},
+        runtime_credentials=SimpleNamespace(
+            devices=lambda: [{"did": "1103841353419", "duid": "6aEI34L0ZtsALO8XtccuPw"}],
+        ),
+    )
+    bridge = MqttTopicBridge(
+        host="127.0.0.1",
+        port=1883,
+        logger=logging.getLogger("test.topic_bridge.learned_did_guard"),
+        runtime_state=runtime_state,
+        inventory_path=inventory_path,
+    )
+
+    bridge._refresh_duid_to_did_map()
+
+    assert bridge._duid_to_did == {"6aEI34L0ZtsALO8XtccuPw": "1103841353419"}

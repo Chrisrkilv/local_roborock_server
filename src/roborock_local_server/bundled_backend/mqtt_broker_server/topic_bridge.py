@@ -190,6 +190,22 @@ class MqttTopicBridge:
 
         inventory_devices = self._load_inventory_devices()
 
+        # DID<->DUID pairs learned during onboarding are authoritative and
+        # disambiguate multiple vacuums of the same model.
+        learned_map: dict[str, str] = {}
+        runtime_credentials = getattr(self._runtime_state, "runtime_credentials", None)
+        if runtime_credentials is not None:
+            try:
+                learned_devices = runtime_credentials.devices()
+            except Exception:
+                learned_devices = []
+            for device in learned_devices:
+                duid = str(device.get("duid") or "").strip()
+                did = str(device.get("did") or "").strip()
+                if duid and did:
+                    learned_map[duid] = did
+        learned_dids = set(learned_map.values())
+
         did_counts_by_model: dict[str, int] = {}
         unique_did_by_model: dict[str, str] = {}
         for did, model_value in key_models_by_did.items():
@@ -224,18 +240,11 @@ class MqttTopicBridge:
             if did_counts_by_model.get(model, 0) != 1:
                 continue
             mapped_did = unique_did_by_model.get(model)
-            if mapped_did:
+            # Never guess a DID that onboarding already paired with another DUID.
+            if mapped_did and mapped_did not in learned_dids:
                 fresh_map[duid] = mapped_did
 
-        # DID<->DUID pairs learned during onboarding are authoritative and
-        # disambiguate multiple vacuums of the same model.
-        runtime_credentials = getattr(self._runtime_state, "runtime_credentials", None)
-        if runtime_credentials is not None:
-            for device in runtime_credentials.devices():
-                duid = str(device.get("duid") or "").strip()
-                did = str(device.get("did") or "").strip()
-                if duid and did:
-                    fresh_map[duid] = did
+        fresh_map.update(learned_map)
 
         map_changed = fresh_map != self._duid_to_did
         if map_changed:
@@ -383,7 +392,7 @@ class MqttTopicBridge:
                 if self._seen_device_topics:
                     self._logger.warning(
                         "MQTT topic bridge dropped %s: no deterministic rr/d mapping for duid=%s "
-                        "(seen rr/d devices=%d). Set --bridge-device-* or ensure unique model mapping.",
+                        "(seen rr/d devices=%d). Onboard this vacuum so its DID is paired with this DUID.",
                         src_topic,
                         cloud_topic.duid,
                         len(self._seen_device_topics),
@@ -391,7 +400,7 @@ class MqttTopicBridge:
                 else:
                     self._logger.warning(
                         "MQTT topic bridge dropped %s: no rr/d device topic discovered yet. "
-                        "Wait for a vacuum rr/d/i publish or set --bridge-device-*.",
+                        "Wait for a vacuum rr/d/i publish.",
                         src_topic,
                     )
             return
