@@ -203,3 +203,45 @@ def test_topic_bridge_model_fallback_does_not_reuse_did_learned_for_another_duid
     bridge._refresh_duid_to_did_map()
 
     assert bridge._duid_to_did == {"6aEI34L0ZtsALO8XtccuPw": "1103841353419"}
+
+
+def test_topic_bridge_handles_runtime_credentials_exception(tmp_path) -> None:
+    def broken_devices():
+        raise RuntimeError("Store locked")
+
+    runtime_state = SimpleNamespace(
+        key_models_by_did=lambda: {},
+        runtime_credentials=SimpleNamespace(devices=broken_devices),
+    )
+    bridge = MqttTopicBridge(
+        host="127.0.0.1",
+        port=1883,
+        logger=logging.getLogger("test.topic_bridge.exception"),
+        runtime_state=runtime_state,
+        inventory_path=tmp_path / "web_api_inventory.json",
+    )
+
+    bridge._refresh_duid_to_did_map()
+
+    assert bridge._duid_to_did == {}
+
+
+def test_topic_bridge_handles_runtime_credentials_malformed_devices(tmp_path) -> None:
+    runtime_state = SimpleNamespace(
+        key_models_by_did=lambda: {},
+        runtime_credentials=SimpleNamespace(
+            devices=lambda: [None, "invalid", {"duid": "", "did": "123"}, {"duid": "d1", "did": "123"}],
+        ),
+    )
+    bridge = MqttTopicBridge(
+        host="127.0.0.1",
+        port=1883,
+        logger=logging.getLogger("test.topic_bridge.malformed"),
+        runtime_state=runtime_state,
+        inventory_path=tmp_path / "web_api_inventory.json",
+    )
+
+    bridge._refresh_duid_to_did_map()
+
+    assert bridge._duid_to_did == {"d1": "123"}
+

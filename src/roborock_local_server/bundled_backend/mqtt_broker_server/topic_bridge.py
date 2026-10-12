@@ -199,7 +199,11 @@ class MqttTopicBridge:
                 learned_devices = runtime_credentials.devices()
             except Exception:
                 learned_devices = []
+            if not isinstance(learned_devices, list):
+                learned_devices = []
             for device in learned_devices:
+                if not isinstance(device, dict):
+                    continue
                 duid = str(device.get("duid") or "").strip()
                 did = str(device.get("did") or "").strip()
                 if duid and did:
