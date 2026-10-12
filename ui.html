@@ -462,7 +462,6 @@
                         <div class="hint">Leave blank unless you need to override it.</div>
                     </div>
 
-
                     <div id="cfg-err" class="callout err hidden"></div>
 
                     <div class="actions">
@@ -741,7 +740,6 @@
           cst: $("cfg-cst").value,
         });
       } catch (e) {
-
         $("cfg-err").innerHTML = `<strong>Could not continue</strong><div class="sub">${escapeHtml(e.message)}</div>`;
         $("cfg-err").classList.remove("hidden");
       } finally {

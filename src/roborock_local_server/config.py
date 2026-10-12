@@ -242,6 +242,7 @@ def load_config(path: str | Path) -> AppConfig:
     tls = _get_section(parsed, "tls")
     admin = _get_section(parsed, "admin")
     turn = _get_section(parsed, "turn")
+    turn_mode = str(turn.get("mode", "external" if _as_bool(turn.get("enabled"), False) else "disabled")).strip().lower()
     broker_mode = str(broker.get("mode", "embedded")).strip().lower()
     if broker_mode not in {"embedded", "external"}:
         raise ValueError("broker.mode must be 'embedded' or 'external'")
@@ -337,10 +338,10 @@ def load_config(path: str | Path) -> AppConfig:
             ),
         ),
         turn=TurnConfig(
-            mode=str(turn.get("mode", "external" if _as_bool(turn.get("enabled"), False) else "disabled")).strip().lower(),
+            mode=turn_mode,
             host=str(turn.get("host", "")).strip(),
             port=_as_port(turn.get("port"), "turn.port", 3478),
-            username=str(turn.get("username", "") or ("roborock" if turn.get("mode") == "provided" else "")).strip(),
+            username=str(turn.get("username", "") or ("roborock" if turn_mode == "provided" else "")).strip(),
             password=str(turn.get("password", "")).strip(),
             realm=str(turn.get("realm", "") or turn.get("host", "")).strip(),
             ttl=_as_int(turn.get("ttl"), "turn.ttl", 86400),

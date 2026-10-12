@@ -89,9 +89,9 @@ switching away from provided mode. Home Assistant provided mode requires port
 are supported in external mode and standalone Docker, where you control mappings.
 The add-on generates and persists a password when provided mode has none.
 
-`turn_mode` is optional. Leaving it unset preserves older `turn_enabled = true`
-options as external mode; otherwise unset means disabled. Explicit mode takes
-precedence. Stable and beta add-ons expose the same TURN settings.
+`turn_mode` defaults to `disabled`. In `config.toml`, the earlier
+`[turn] enabled = true` form is still read as external mode when `mode` is not
+set; an explicit `mode` takes precedence.
 
 For external mode, supply the relay's host, port, username, password and realm;
 no local TURN port publication is required. It must support authenticated UDP

@@ -50,6 +50,7 @@ For existing cloud integrations, Home Assistant does not support changing the se
 - The current server advertises the same hostname for HTTPS and MQTT/TLS, so Home Assistant's Roborock entry should normally use `ssl://api-roborock.example.com:8881`, not a separate `mqtt-...` hostname.
 - For `tls_mode: provided`, certificates from the official Home Assistant Let's Encrypt add-on are stored in `/ssl` (e.g. `/ssl/fullchain.pem` and `/ssl/privkey.pem`). If you manage certificates in another add-on such as Nginx Proxy Manager, you can point `cert_file` and `key_file` at that add-on's certs through `/all_addon_configs/...` (example: `/all_addon_configs/a0d7b954_nginxproxymanager/letsencrypt/live/npm-3/fullchain.pem`).
 - If a reverse proxy exposes different public ports than the add-on listeners, keep `https_port`/`mqtt_tls_port` as the add-on listener ports and set `advertised_https_port`/`advertised_mqtt_tls_port` to the public ports. The proxy must preserve the original `Host` header, and MQTT/TLS still needs a reachable port or a TCP/stream proxy.
+
 ### Camera TURN networking
 
 `turn_mode` supports `disabled` (default), `provided` (starts coturn), and
@@ -62,13 +63,3 @@ endpoint needs DNS, routing and trusted TLS; unknown models are checked for
 both. An API-only certificate is insufficient for the stripped Qrevo alias.
 See [Camera documentation](../docs/camera.md) for certificate choices, pattern
 PIN conversion and troubleshooting.
-
-### Publishing this camera-capable release
-
-The stable manifest targets `1.2.2` and the beta manifest targets `1.2.2-rc1`.
-Publish those images before distributing these updated manifests. The release
-workflow requires the release tag to match both package version literals and
-`uv.lock`: a beta release needs the package set to `1.2.2-rc1` and tag
-`v1.2.2-rc1`; the stable release uses `1.2.2` and `v1.2.2`. Merging a PR does
-not publish either image. An older image does not gain TURN by receiving new
-add-on options.

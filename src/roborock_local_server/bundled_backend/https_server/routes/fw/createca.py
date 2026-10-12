@@ -2,17 +2,21 @@
 
 Background (issue #18): when the app requests a live camera preview, the robot
 firmware first fetches a TURN/STUN configuration from a fwapi endpoint before it
-starts the WebRTC session. The host is derived from the onboarding region string
-(``region[:15] + "iot.roborock.com"``), so with a short enough region it resolves
-to this server. Until this route existed the request fell through to the catchall,
-the robot got no TURN config, and ``start_camera_preview`` returned
-``-10012 / request turnserver failed`` with the app showing an instant timeout.
+starts the WebRTC session. The firmware builds the host as ``<input>[:15] +
+"iot.roborock.com"``, where the input depends on the model: the Saros 10R (a144)
+uses the onboarding ``country_domain`` and the Qrevo MaxV (a87) uses ``token.r``
+including its explicit port. A short input with a trailing ``/`` resolves it to
+this server (see docs/camera.md). Until this route existed the request fell
+through to the catchall, the robot got no TURN config, and
+``start_camera_preview`` returned ``-10012 / request turnserver failed`` with the
+app showing an instant timeout.
 
 This route answers with a TURN/STUN server operated alongside the stack (for
 example coturn). The robot then completes the full WebRTC handshake against it and
 a go2rtc ``roborock://`` consumer receives frames, all without reaching the
 Roborock cloud. The response contract is reconstructed from a Saros 10R
-(``roborock.vacuum.a144``); the firmware accepts a plain-JSON body:
+(``roborock.vacuum.a144``) and also works on the Qrevo MaxV
+(``roborock.vacuum.a87``); the firmware accepts a plain-JSON body:
 
     { "code": 200, "msg": "success",
       "data":   { url, user, pwd, ttl, urls, username, credential, realm },
@@ -20,8 +24,8 @@ Roborock cloud. The response contract is reconstructed from a Saros 10R
 
 ``data`` carries the legacy ``user``/``pwd`` field names and ``result`` the
 ICE-style ``username``/``credential`` names; both are populated so either parser
-in the firmware is satisfied. When ``[turn].enabled`` is false (the default) the
-request falls through to the catchall, so behaviour is unchanged for anyone not
+in the firmware is satisfied. When ``[turn].mode`` is ``disabled`` (the default)
+the request falls through to the catchall, so behaviour is unchanged for anyone not
 running a TURN server.
 """
 

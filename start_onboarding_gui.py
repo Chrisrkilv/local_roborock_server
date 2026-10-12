@@ -646,8 +646,6 @@ def _build_config_from_payload(payload: dict[str, Any]) -> GuidedOnboardingConfi
         country_domain = normalize_camera_domain(camera_domain)
     elif not country_domain:
         country_domain = country_from_iana(timezone) or DEFAULT_COUNTRY_DOMAIN
-
-
     return GuidedOnboardingConfig(
         api_base_url=api_base_url,
         stack_server=stack_server,

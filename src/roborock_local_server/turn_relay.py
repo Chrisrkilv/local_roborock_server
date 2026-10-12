@@ -72,7 +72,7 @@ class EmbeddedTurnRelay:
         time.sleep(0.3)
         if self.process.poll() is not None:
             self.stop()
-            raise RuntimeError(f"coturn exited during startup; see container stdout")
+            raise RuntimeError("coturn exited during startup; see container stdout")
 
     def stop(self) -> None:
         if self.process is not None:

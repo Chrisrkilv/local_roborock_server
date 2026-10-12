@@ -484,8 +484,6 @@ def prompt_for_config(args: argparse.Namespace, output: TextIO = sys.stdout) -> 
         country_domain = country_from_iana(timezone)
         if not country_domain:
             country_domain = _prompt_text("", "Country domain (could not auto-detect from timezone)", default=DEFAULT_COUNTRY_DOMAIN)
-
-
     return GuidedOnboardingConfig(
         api_base_url=api_base_url,
         stack_server=stack_server,

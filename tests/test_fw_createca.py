@@ -37,7 +37,7 @@ def _make_context(tmp_path, *, turn_enabled: bool):
         turn_port=3478,
         turn_username="rrturn",
         turn_password="s3cret",
-        turn_realm="rrgui.v6.rocks",
+        turn_realm="turn.example.com",
         turn_ttl=86400,
     )
 
@@ -66,7 +66,7 @@ def test_createca_returns_turn_payload_when_enabled(tmp_path):
     assert data["user"] == "rrturn" and data["pwd"] == "s3cret"
     # ICE-style aliases also present for the firmware's alternate parser.
     assert data["username"] == "rrturn" and data["credential"] == "s3cret"
-    assert data["realm"] == "rrgui.v6.rocks"
+    assert data["realm"] == "turn.example.com"
     assert data["ttl"] == 86400
     assert "stun:192.168.1.10:3478" in data["urls"]
     # ``result`` mirrors ``data``.

@@ -251,7 +251,7 @@ def _render_config_toml(
     acme_eab_kid_file = str(acme_eab_kid_path) if acme_server == "actalis" else ""
     acme_eab_hmac_key_file = str(acme_eab_hmac_key_path) if acme_server == "actalis" else ""
 
-    turn_mode = str(options.get("turn_mode") or ("external" if merged.get("turn_enabled") else "disabled")).strip().lower()
+    turn_mode = str(merged.get("turn_mode") or "disabled").strip().lower()
     if turn_mode not in {"disabled", "provided", "external"}:
         raise ValueError("turn_mode must be disabled, provided, or external")
     turn_host = str(merged.get("turn_host", "") or "").strip() or (stack_fqdn if turn_mode == "provided" else "")
@@ -355,7 +355,6 @@ def _render_config_toml(
             "",
             "[turn]",
             f"mode = {_toml_string(turn_mode)}",
-            f"enabled = {_toml_bool(turn_mode != 'disabled')}",
             f"host = {_toml_string(turn_host)}",
             f"port = {turn_port}",
             f"username = {_toml_string(turn_username)}",

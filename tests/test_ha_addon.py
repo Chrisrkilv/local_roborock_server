@@ -499,7 +499,7 @@ def test_write_config_from_home_assistant_options_renders_turn_settings(tmp_path
             "admin_password": "super-secret-password",
             "protocol_login_email": "user@example.com",
             "protocol_login_pin": "123456",
-            "turn_enabled": True,
+            "turn_mode": "external",
             "turn_host": "turn.example.com",
             "turn_port": 3478,
             "turn_username": "rrturn",
@@ -516,7 +516,6 @@ def test_write_config_from_home_assistant_options_renders_turn_settings(tmp_path
 
     parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
     assert parsed["turn"]["mode"] == "external"
-    assert parsed["turn"]["enabled"] is True
     assert parsed["turn"]["host"] == "turn.example.com"
     assert parsed["turn"]["port"] == 3478
     assert parsed["turn"]["username"] == "rrturn"

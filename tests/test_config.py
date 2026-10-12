@@ -17,6 +17,20 @@ def test_turn_config_defaults_and_rejects_unsafe_provided_credentials(tmp_path):
         load_config(path)
 
 
+def test_turn_config_mode_is_case_insensitive(tmp_path):
+    path = write_release_config(tmp_path)
+    path.write_text(path.read_text() + '\n[turn]\nmode="Provided"\nhost="relay.example"\npassword="secret"\n')
+    config = load_config(path)
+    assert config.turn.mode == "provided"
+    assert config.turn.username == "roborock"
+
+
+def test_turn_config_legacy_enabled_flag_maps_to_external(tmp_path):
+    path = write_release_config(tmp_path)
+    path.write_text(path.read_text() + '\n[turn]\nenabled=true\nhost="relay.example"\nusername="user"\npassword="secret"\n')
+    assert load_config(path).turn.mode == "external"
+
+
 def test_turn_config_rejects_nonpositive_ttl(tmp_path):
     path = write_release_config(tmp_path)
     path.write_text(path.read_text() + '\n[turn]\nmode="external"\nhost="relay.example"\nusername="user"\npassword="secret"\nttl=0\n')
