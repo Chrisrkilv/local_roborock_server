@@ -1,5 +1,5 @@
 name: Roborock Local Server
-version: "1.2.1-house4"
+version: "1.2.1-house4.1"
 slug: roborock_local_server_house
 description: Upstream main plus the timezone and exact certificate name options, built on this machine from the house branch of the fork.
 url: "https://github.com/Chrisrkilv/local_roborock_server/tree/house"
