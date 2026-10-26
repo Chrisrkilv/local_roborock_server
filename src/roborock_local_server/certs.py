@@ -199,6 +199,9 @@ class CertificateManager:
             raise RuntimeError("ACME completed without writing certificate files")
 
     def _certificate_domains(self) -> tuple[str, list[str]]:
+        if self.config.tls.domains:
+            stack_fqdn = self.config.network.stack_fqdn
+            return stack_fqdn, [stack_fqdn, *(domain for domain in self.config.tls.domains if domain != stack_fqdn)]
         if self.config.tls.acme_server == "actalis":
             stack_fqdn = self.config.network.stack_fqdn
             return stack_fqdn, [stack_fqdn]

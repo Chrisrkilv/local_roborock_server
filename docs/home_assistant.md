@@ -42,6 +42,7 @@ For most users, prefer `acme_server = zerossl`. Use `actalis` mainly for older v
    - TLS settings:
      - `tls_mode = provided` with explicit `cert_file` and `key_file`
      - or `tls_mode = cloudflare_acme` with `tls_base_domain`, `tls_email`, and `cloudflare_token`
+     - optional `tls_domains` to request `stack_fqdn` plus those exact names instead of `tls_base_domain` and its wildcard
      - optional ACME CA selection with `acme_server` (`zerossl` is the preferred default for most users)
      - if `acme_server = actalis`, also set `acme_eab_kid` and `acme_eab_hmac_key`.
 
