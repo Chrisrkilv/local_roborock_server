@@ -35,6 +35,7 @@ For most users, prefer `acme_server = zerossl`. Use `actalis` mainly for older v
    - `https_port`
    - `mqtt_tls_port`
    - `region`
+   - `timezone` (optional, for example `Europe/London`; blank uses the region's default)
    - `admin_password`
    - `protocol_login_email`
    - `protocol_login_pin`

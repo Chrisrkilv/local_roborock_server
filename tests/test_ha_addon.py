@@ -47,6 +47,34 @@ def test_addon_rejects_invalid_logging_options_before_writing_config(tmp_path, o
     assert config_path.read_text() == "existing configuration"
 
 
+@pytest.mark.parametrize(("timezone", "expected"), [("", ""), ("Europe/London", "Europe/London"), (" UTC ", "UTC")])
+def test_timezone_option_round_trips_from_addon_schema(tmp_path, timezone, expected):
+    manifest = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())
+    assert manifest["options"]["timezone"] == ""
+    assert manifest["schema"]["timezone"] == "str?"
+    options = {**manifest["options"], "stack_fqdn": "api-roborock.example.com", "region": "eu",
+               "cert_file": "cert", "key_file": "key", "admin_password": "secret",
+               "protocol_login_email": "user@example.com", "protocol_login_pin": "123456",
+               "timezone": timezone}
+    options_path = tmp_path / "options.json"
+    config_path = tmp_path / "config.toml"
+    _write_options(options_path, options)
+    write_config_from_home_assistant_options(options_path=options_path, config_path=config_path)
+    config = load_config(config_path)
+    assert config.network.region == "eu"
+    assert config.network.timezone == expected
+
+
+def test_addon_rejects_invalid_timezone_before_writing_config(tmp_path):
+    options_path = tmp_path / "options.json"
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("existing configuration")
+    _write_options(options_path, {"stack_fqdn": "api-roborock.example.com", "timezone": "London"})
+    with pytest.raises(ValueError, match="timezone must be a valid timezone name"):
+        write_config_from_home_assistant_options(options_path=options_path, config_path=config_path)
+    assert config_path.read_text() == "existing configuration"
+
+
 def test_write_config_from_home_assistant_options_provided_tls(tmp_path: Path) -> None:
     options_path = tmp_path / "options.json"
     config_path = tmp_path / "config.toml"

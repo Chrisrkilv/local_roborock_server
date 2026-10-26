@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from .configure import hash_password
-from .config import LoggingConfig
+from .config import LoggingConfig, _as_timezone
 
 DEFAULT_OPTIONS: dict[str, Any] = {
     "stack_fqdn": "",
@@ -22,6 +22,7 @@ DEFAULT_OPTIONS: dict[str, Any] = {
     "advertised_https_port": 0,
     "advertised_mqtt_tls_port": 0,
     "region": "us",
+    "timezone": "",
     "log_max_size_mb": LoggingConfig.max_size_mb,
     "log_backup_count": LoggingConfig.backup_count,
     "tls_mode": "provided",
@@ -188,6 +189,7 @@ def _render_config_toml(
         require_api_prefix=True,
     )
     region = str(merged.get("region", "us") or "us").strip().lower() or "us"
+    timezone = _as_timezone(merged.get("timezone", ""), "timezone")
     listener_mode = str(merged.get("listener_mode", "local_tls") or "local_tls").strip().lower() or "local_tls"
     if listener_mode != "local_tls":
         # The add-on always terminates its own TLS; external_tls is Docker-only.
@@ -302,6 +304,7 @@ def _render_config_toml(
         f"advertised_https_port = {advertised_https_port}",
         f"advertised_mqtt_tls_port = {advertised_mqtt_tls_port}",
         f"region = {_toml_string(region)}",
+        f"timezone = {_toml_string(timezone)}",
         "",
         "[broker]",
         f"mode = {_toml_string(broker_mode)}",
