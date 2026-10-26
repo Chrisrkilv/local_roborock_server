@@ -74,6 +74,7 @@ class TlsConfig:
     acme_eab_hmac_key_file: str
     cert_file: str
     key_file: str
+    domains: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -222,6 +223,26 @@ def _as_trusted_proxies(value: object, field_name: str, default: tuple[str, ...]
     return tuple(entries)
 
 
+def _as_domains(value: object, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        value = value.split(",")
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"{field_name} must be a list of hostnames")
+    domains: list[str] = []
+    for item in value:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        if text.startswith("*"):
+            raise ValueError(f"{field_name} entry {text!r} must be an exact hostname, not a wildcard")
+        domain = _normalize_hostname(text, field_name)
+        if domain not in domains:
+            domains.append(domain)
+    return tuple(domains)
+
+
 def _as_timezone(value: object, field_name: str) -> str:
     if value is None:
         return ""
@@ -346,6 +367,7 @@ def load_config(path: str | Path) -> AppConfig:
             acme_eab_hmac_key_file=str(tls.get("acme_eab_hmac_key_file", "")).strip(),
             cert_file=str(tls.get("cert_file", "")).strip(),
             key_file=str(tls.get("key_file", "")).strip(),
+            domains=_as_domains(tls.get("domains"), "tls.domains"),
         ),
         admin=AdminConfig(
             password_hash=_require_non_empty(admin.get("password_hash"), "admin.password_hash"),
@@ -396,7 +418,8 @@ def load_config(path: str | Path) -> AppConfig:
     # so the server itself needs no certificate material.
     if config.network.listener_mode == "local_tls":
         if config.tls.mode == "cloudflare_acme":
-            _normalize_hostname(config.tls.base_domain, "tls.base_domain")
+            if not config.tls.domains:
+                _normalize_hostname(config.tls.base_domain, "tls.base_domain")
             _require_non_empty(config.tls.email, "tls.email")
             _require_non_empty(config.tls.cloudflare_token_file, "tls.cloudflare_token_file")
             has_kid = bool(config.tls.acme_eab_kid or config.tls.acme_eab_kid_file)

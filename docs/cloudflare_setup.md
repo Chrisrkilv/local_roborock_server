@@ -14,6 +14,7 @@ The automated issuance shape differs by ACME CA:
 
 - `zerossl` requests `base_domain` plus `*.base_domain`
 - `actalis` requests only `stack_fqdn`
+- with `domains` set, either CA requests `stack_fqdn` plus those exact names, and `base_domain` is not needed
 
 ## Create the Cloudflare Token
 

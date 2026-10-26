@@ -46,6 +46,9 @@ cloudflare_token_file = "/run/secrets/cloudflare_token"
 renew_days_before = 30
 renew_check_seconds = 43200
 acme_server = "zerossl"
+# Optional exact certificate names. When set, the certificate covers stack_fqdn plus these
+# names instead of base_domain and its wildcard, and base_domain may be left empty.
+# domains = ["roborock.example.com"]
 
 [admin]
 password_hash = "pbkdf2_sha256$600000$replace_me$replace_me"

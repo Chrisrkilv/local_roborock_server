@@ -280,6 +280,53 @@ def test_write_config_from_home_assistant_options_cloudflare(tmp_path: Path) -> 
     assert token_path.read_text(encoding="utf-8") == "cloudflare-token-123"
 
 
+def test_write_config_from_home_assistant_options_cloudflare_exact_domains(tmp_path: Path) -> None:
+    manifest = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())
+    assert manifest["options"]["tls_domains"] == []
+    assert manifest["schema"]["tls_domains"] == ["str?"]
+    options_path = tmp_path / "options.json"
+    config_path = tmp_path / "config.toml"
+    token_path = tmp_path / "run" / "secrets" / "cloudflare_token"
+
+    _write_options(
+        options_path,
+        {
+            **manifest["options"],
+            "stack_fqdn": "api-roborock.example.com",
+            "tls_mode": "cloudflare_acme",
+            "tls_base_domain": "",
+            "tls_domains": ["Roborock.Example.com", ""],
+            "tls_email": "acme@example.com",
+            "cloudflare_token": "cloudflare-token-123",
+            "admin_password": "secret",
+            "protocol_login_email": "user@example.com",
+            "protocol_login_pin": "654321",
+        },
+    )
+
+    write_config_from_home_assistant_options(
+        options_path=options_path,
+        config_path=config_path,
+        cloudflare_token_path=token_path,
+    )
+
+    parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert parsed["tls"]["base_domain"] == ""
+    assert parsed["tls"]["domains"] == ["roborock.example.com"]
+    assert load_config(config_path).tls.domains == ("roborock.example.com",)
+
+
+@pytest.mark.parametrize(("tls_domains", "message"), [([], "tls_base_domain is required"),
+                                                     (["*.example.com"], "not wildcards")])
+def test_write_config_from_home_assistant_options_cloudflare_domain_errors(tmp_path, tls_domains, message):
+    options_path = tmp_path / "options.json"
+    _write_options(options_path, {"stack_fqdn": "api-roborock.example.com", "tls_mode": "cloudflare_acme",
+                                  "tls_domains": tls_domains, "tls_email": "acme@example.com",
+                                  "cloudflare_token": "cloudflare-token-123"})
+    with pytest.raises(ValueError, match=message):
+        write_config_from_home_assistant_options(options_path=options_path, config_path=tmp_path / "config.toml")
+
+
 def test_write_config_from_home_assistant_options_infers_cloudflare_acme_from_token(tmp_path: Path) -> None:
     options_path = tmp_path / "options.json"
     config_path = tmp_path / "config.toml"

@@ -557,3 +557,56 @@ def test_load_config_rejects_invalid_trusted_proxy(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="network.trusted_proxies entry 'traefik'"):
         load_config(config_file)
+
+
+_TLS_DOMAINS_CONFIG = """
+[network]
+stack_fqdn = "api-roborock.example.com"
+
+[broker]
+mode = "embedded"
+
+[storage]
+data_dir = "data"
+
+[tls]
+mode = "cloudflare_acme"
+{tls_domains}
+email = "acme@example.com"
+cloudflare_token_file = "secrets/cloudflare_token"
+
+[admin]
+password_hash = "pbkdf2_sha256$600000$abc$def"
+session_secret = "abcdefghijklmnopqrstuvwxyz123456"
+protocol_login_email = "user@example.com"
+protocol_login_pin_hash = "pbkdf2_sha256$600000$ghi$jkl"
+"""
+
+
+def test_load_config_tls_domains_make_base_domain_optional(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        _TLS_DOMAINS_CONFIG.format(tls_domains='domains = ["Roborock.Example.com", "roborock.example.com."]').strip(),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_file)
+
+    assert config.tls.base_domain == ""
+    assert config.tls.domains == ("roborock.example.com",)
+
+
+def test_load_config_requires_base_domain_without_tls_domains(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(_TLS_DOMAINS_CONFIG.format(tls_domains="domains = []").strip(), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="tls.base_domain is required"):
+        load_config(config_file)
+
+
+def test_load_config_rejects_wildcard_tls_domains(tmp_path: Path) -> None:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(_TLS_DOMAINS_CONFIG.format(tls_domains='domains = ["*.example.com"]').strip(), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="tls.domains entry '\\*.example.com' must be an exact hostname"):
+        load_config(config_file)

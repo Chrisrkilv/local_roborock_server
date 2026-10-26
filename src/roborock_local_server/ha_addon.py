@@ -26,6 +26,7 @@ DEFAULT_OPTIONS: dict[str, Any] = {
     "log_backup_count": LoggingConfig.backup_count,
     "tls_mode": "provided",
     "tls_base_domain": "",
+    "tls_domains": [],
     "tls_email": "",
     "acme_server": "zerossl",
     "acme_eab_kid": "",
@@ -144,6 +145,24 @@ def _normalize_acme_server(value: object, *, field_name: str) -> str:
     return normalized
 
 
+def _normalize_domains(value: object, *, field_name: str) -> list[str]:
+    if value in (None, ""):
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name} must be a list of hostnames")
+    domains: list[str] = []
+    for item in value:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        if text.startswith("*"):
+            raise ValueError(f"{field_name} entries must be exact hostnames, not wildcards")
+        domain = _normalize_hostname(text, field_name=field_name)
+        if domain not in domains:
+            domains.append(domain)
+    return domains
+
+
 def _load_options(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -215,6 +234,7 @@ def _render_config_toml(
     if tls_mode not in {"provided", "cloudflare_acme"}:
         raise ValueError("tls_mode must be 'provided' or 'cloudflare_acme'")
     tls_base_domain = str(merged.get("tls_base_domain", "") or "").strip()
+    tls_domains = _normalize_domains(merged.get("tls_domains"), field_name="tls_domains")
     tls_email = str(merged.get("tls_email", "") or "").strip()
     acme_server = _normalize_acme_server(merged.get("acme_server", "zerossl"), field_name="acme_server")
     acme_eab_kid = str(merged.get("acme_eab_kid", "") or "").strip()
@@ -225,7 +245,8 @@ def _render_config_toml(
     effective_tls_mode = "cloudflare_acme" if cloudflare_token else tls_mode
 
     if effective_tls_mode == "cloudflare_acme":
-        _normalize_hostname(tls_base_domain, field_name="tls_base_domain")
+        if not tls_domains:
+            _normalize_hostname(tls_base_domain, field_name="tls_base_domain")
         _require_email(tls_email, field_name="tls_email")
         _require_non_empty(cloudflare_token, field_name="cloudflare_token")
         if (acme_eab_kid and not acme_eab_hmac_key) or (acme_eab_hmac_key and not acme_eab_kid):
@@ -324,6 +345,7 @@ def _render_config_toml(
         lines.extend(
             [
                 f"base_domain = {_toml_string(tls_base_domain)}",
+                f"domains = [{', '.join(_toml_string(domain) for domain in tls_domains)}]",
                 f"email = {_toml_string(tls_email)}",
                 f"cloudflare_token_file = {_toml_string(cloudflare_token_file)}",
                 "renew_days_before = 30",
