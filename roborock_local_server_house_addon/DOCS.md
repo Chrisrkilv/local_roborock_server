@@ -13,8 +13,8 @@ It is upstream `main` plus two add-on options that are offered upstream as separ
 Log rotation (`log_max_size_mb`, `log_backup_count`) is upstream's own, from `main`.
 Runtime logs and traces are left out of Home Assistant backups.
 
-Everything else is the same as the upstream add-on; see its documentation in
-`roborock_local_server_addon/DOCS.md`.
+Everything else is the same as the upstream add-on; see its
+[documentation](https://github.com/Python-roborock/local_roborock_server/blob/main/roborock_local_server_addon/DOCS.md).
 
 ## Updating
 

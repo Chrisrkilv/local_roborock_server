@@ -15,9 +15,8 @@ def _write_options(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-@pytest.mark.parametrize("addon", ["roborock_local_server_addon", "roborock_local_server_beta_addon"])
-def test_logging_options_round_trip_from_addon_schema(tmp_path, addon):
-    manifest = yaml.safe_load((Path(addon) / "config.yaml").read_text())
+def test_logging_options_round_trip_from_addon_schema(tmp_path):
+    manifest = yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())
     assert manifest["options"]["log_max_size_mb"] == 10
     assert manifest["options"]["log_backup_count"] == 3
     assert manifest["schema"]["log_max_size_mb"] == "int(1,1024)?"
@@ -49,7 +48,7 @@ def test_addon_rejects_invalid_logging_options_before_writing_config(tmp_path, o
 
 @pytest.mark.parametrize(("timezone", "expected"), [("", ""), ("Europe/London", "Europe/London"), (" UTC ", "UTC")])
 def test_timezone_option_round_trips_from_addon_schema(tmp_path, timezone, expected):
-    manifest = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())
+    manifest = yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())
     assert manifest["options"]["timezone"] == ""
     assert manifest["schema"]["timezone"] == "str?"
     options = {**manifest["options"], "stack_fqdn": "api-roborock.example.com", "region": "eu",
@@ -309,7 +308,7 @@ def test_write_config_from_home_assistant_options_cloudflare(tmp_path: Path) -> 
 
 
 def test_write_config_from_home_assistant_options_cloudflare_exact_domains(tmp_path: Path) -> None:
-    manifest = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())
+    manifest = yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())
     assert manifest["options"]["tls_domains"] == []
     assert manifest["schema"]["tls_domains"] == ["str?"]
     options_path = tmp_path / "options.json"
@@ -600,7 +599,7 @@ def test_write_config_from_home_assistant_options_renders_turn_settings(tmp_path
     _write_options(
         options_path,
         {
-            **yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())["options"],
+            **yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())["options"],
             "stack_fqdn": "api-roborock.example.com",
             "tls_mode": "provided",
             "cert_file": "/ssl/fullchain.pem",
@@ -659,7 +658,7 @@ def test_provided_turn_generates_stable_credentials_and_uses_stack_host(tmp_path
 
 
 def test_provided_turn_rejects_unpublished_custom_listener_port(tmp_path):
-    options = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())["options"]
+    options = yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())["options"]
     options.update(stack_fqdn="api-vac.cc", tls_mode="provided", cert_file="cert", key_file="key",
                    admin_password="secret", protocol_login_email="user@example.com", protocol_login_pin="123456",
                    turn_mode="provided", turn_port=3479)
@@ -671,7 +670,7 @@ def test_provided_turn_rejects_unpublished_custom_listener_port(tmp_path):
 
 def test_empty_generated_turn_password_is_replaced_atomically(tmp_path, monkeypatch):
     from roborock_local_server import ha_addon
-    options = yaml.safe_load(Path("roborock_local_server_addon/config.yaml").read_text())["options"]
+    options = yaml.safe_load(Path("roborock_local_server_house_addon/config.yaml").read_text())["options"]
     options.update(stack_fqdn="api-vac.cc", tls_mode="provided", cert_file="cert", key_file="key",
                    admin_password="secret", protocol_login_email="user@example.com", protocol_login_pin="123456",
                    turn_mode="provided")
