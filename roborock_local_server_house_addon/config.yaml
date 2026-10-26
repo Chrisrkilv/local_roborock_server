@@ -1,4 +1,4 @@
-name: Roborock Local Server (house fork)
+name: Roborock Local Server
 version: "1.2.1-house4"
 slug: roborock_local_server_house
 description: Upstream main plus the timezone and exact certificate name options, built on this machine from the house branch of the fork.
